@@ -37,6 +37,25 @@ claude plugin install session-lights@session-lights
 
 New sessions pick it up. Sessions already open get it the next time they start.
 
+## Hermes
+
+The same lights work in Hermes as a plugin in [hermes/](hermes). From this repo's folder, link it into your Hermes plugins folder (or copy it), then turn it on, since Hermes plugins are off until you enable them:
+
+```bash
+ln -s "$(pwd)/hermes" ~/.hermes/plugins/session-lights
+```
+
+```bash
+hermes plugins enable session-lights
+```
+
+Restart the Hermes gateway if it's running. The light is part of the stored session title, so it shows up in `hermes sessions list`, the terminal UI and the desktop sidebar. The emoji and their meaning are the same as above, with two differences:
+
+- A session shows no light until Hermes has given it a title, since the light goes in front of the title.
+- Writing the title tells Hermes you named the session, so it stops retitling it on its own once the first light lands. Rename it yourself any time.
+
+Hermes has no list of background tasks at the end of a turn, so ⚙️ clears when the reply lands, even if something is still running.
+
 ## How it works
 
 It's one small hooks module, [claude/hooks/register.ts](claude/hooks/register.ts). It listens for a turn starting, a permission prompt, a question or plan approval, and a turn ending, then renames the session through the desktop app's own session tools, so it only ever touches the session it's running in. Those two calls are allowed without a prompt, and nothing else is.

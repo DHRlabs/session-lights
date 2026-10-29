@@ -1,0 +1,5 @@
+name: session-lights
+manifest_version: 1
+version: 0.1.0
+description: Puts a status emoji (working, waiting, or the reply's traffic light) at the front of a Hermes session's title.
+author: DHRlabs
