@@ -1,0 +1,11 @@
+{
+  "name": "session-lights",
+  "owner": { "name": "DHRlabs" },
+  "plugins": [
+    {
+      "name": "session-lights",
+      "source": "./claude",
+      "description": "Status emoji at the front of each Claude desktop session title."
+    }
+  ]
+}

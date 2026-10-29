@@ -1,0 +1,9 @@
+{
+  "name": "session-lights",
+  "version": "0.1.0",
+  "description": "Puts a status emoji at the front of each Claude desktop session title: working, waiting on a permission, waiting on a question, then the reply's status light.",
+  "author": { "name": "DHRlabs" },
+  "homepage": "https://github.com/DHRlabs/session-lights",
+  "repository": "https://github.com/DHRlabs/session-lights",
+  "license": "GPL-3.0-only"
+}
