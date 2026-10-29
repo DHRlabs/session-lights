@@ -102,6 +102,20 @@ def _on_session_end(session_id="", failed=False, interrupted=False, **_):
     return None
 
 
+def _on_api_error(session_id="", retryable=None, retry_count=None, max_retries=None, **_):
+    # A request error that will not be retried can end the turn before on_session_end fires.
+    try:
+        with _lock:
+            if not session_id or session_id in _children:
+                return None
+        out_of_retries = retry_count is not None and max_retries is not None and retry_count + 1 >= max_retries
+        if retryable is False or out_of_retries:
+            _write(session_id, FAILED)
+    except Exception:
+        log.debug("session-lights: api_request_error failed", exc_info=True)
+    return None
+
+
 def _on_wait(kind="", session_id="", request_id="", **_):
     try:
         light = PERMISSION if kind == "approval" else QUESTION if kind == "clarify" else ""
@@ -141,3 +155,4 @@ def register(ctx):
     ctx.register_hook("on_human_input_resolved", _on_resolved)
     ctx.register_hook("post_llm_call", _on_turn_end)
     ctx.register_hook("on_session_end", _on_session_end)
+    ctx.register_hook("api_request_error", _on_api_error)
