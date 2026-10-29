@@ -75,10 +75,19 @@ export const register: Register = on => {
     }
   })
 
+  on('classic.Stop', ($, e, next) => {
+    if (!e.agent_id) {
+      const running = (e.background_tasks?.length ?? 0) > 0
+      show($, running ? WORKING : e.last_assistant_message?.match(TICKER)?.at(-1) ?? NO_LIGHT)
+    }
+    return next(e)
+  })
+
   on('turn.complete', ($, e, next) => {
     if (!e.agentId) {
       waiting.clear()
-      show($, e.reason === 'error' ? FAILED : e.answer.match(TICKER)?.at(-1) ?? NO_LIGHT)
+      if (e.reason === 'error' || e.reason === 'refusal') show($, FAILED)
+      if (e.reason === 'aborted') show($, e.answer.match(TICKER)?.at(-1) ?? NO_LIGHT)
     }
     return next(e)
   })

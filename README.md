@@ -4,7 +4,7 @@ With a few Claude sessions going at once, you can't tell from the sidebar which 
 
 | Emoji | Means |
 |---|---|
-| ⚙️ | Working on your last message |
+| ⚙️ | Working, including background work still running after a reply |
 | 🔐 | Waiting for you to allow a tool |
 | ❓ | Waiting for you to answer a question or approve a plan |
 | 🟢 🟡 🔴 | Done. The light is the last 🟢, 🟡 or 🔴 in Claude's reply |
