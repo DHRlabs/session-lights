@@ -52,7 +52,10 @@ export const register: Register = on => {
     const ours = next.origin.plugin === $.plugin.name
     if (ours && (e.tool === GET || e.tool === RENAME)) return { decision: 'allow' }
     const verdict = await next(e)
-    if (!ours && verdict.decision === 'ask' && e.tool_use_id) waiting.add(e.tool_use_id)
+    if (!ours && verdict.decision === 'ask' && e.tool_use_id) {
+      waiting.add(e.tool_use_id)
+      if (!ASKS_PERSON.has(e.tool)) show($, PERMISSION)
+    }
     return verdict
   })
 
