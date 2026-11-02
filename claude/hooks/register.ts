@@ -18,7 +18,12 @@ let want: string | undefined
 let shown: string | undefined
 let busy = false
 const waiting = new Set<string>()
-const modes = new Map<string, string | undefined>()
+// The session's permission mode as the last classic event that carries one reported it.
+// classic.PreToolUse cannot say: its e is the tool call alone.
+let mode: string | undefined
+const heard = (m: string | undefined) => { if (m) mode = m }
+// Unknown counts as no person: a real dialog still raises classic.PermissionRequest, which names its mode.
+const personDecides = (m: string | undefined) => !!m && !NO_PERSON.has(m)
 
 const show = ($: EngineInterface, light: string) => {
   want = light
@@ -51,8 +56,13 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('classic.PreToolUse', ($, e, next) => {
-    modes.set(e.tool_use_id, e.permission_mode)
+  on('classic.UserPromptSubmit', ($, e, next) => {
+    heard(e.permission_mode)
+    return next(e)
+  })
+
+  on('classic.PostToolUse', ($, e, next) => {
+    heard(e.permission_mode)
     return next(e)
   })
 
@@ -62,14 +72,16 @@ export const register: Register = on => {
     const verdict = await next(e)
     if (!ours && verdict.decision === 'ask' && e.tool_use_id) {
       waiting.add(e.tool_use_id)
-      const person = verdict.plugin !== undefined || !NO_PERSON.has(modes.get(e.tool_use_id) ?? '')
+      const person = verdict.plugin !== undefined || personDecides(mode)
       if (person && !ASKS_PERSON.has(e.tool)) show($, PERMISSION)
     }
     return verdict
   })
 
+  // Auto mode's classifier and dontAsk settle core asks without a person, so the mode decides the light here too.
   on('classic.PermissionRequest', ($, e, next) => {
-    if (!ASKS_PERSON.has(e.tool_name)) show($, PERMISSION)
+    heard(e.permission_mode)
+    if (personDecides(e.permission_mode ?? mode) && !ASKS_PERSON.has(e.tool_name)) show($, PERMISSION)
     return next(e)
   })
 
@@ -83,12 +95,12 @@ export const register: Register = on => {
       return await next(e)
     } finally {
       waiting.delete(e.tool_use_id)
-      modes.delete(e.tool_use_id)
       if (waiting.size === 0 && (want === PERMISSION || want === QUESTION)) show($, WORKING)
     }
   })
 
   on('classic.Stop', ($, e, next) => {
+    heard(e.permission_mode)
     if (!e.agent_id) {
       const running = (e.background_tasks?.length ?? 0) > 0
       show($, running ? WORKING : e.last_assistant_message?.match(TICKER)?.at(-1) ?? NO_LIGHT)
