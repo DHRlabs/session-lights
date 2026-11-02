@@ -11,12 +11,22 @@ const FAILED = '⚠️'
 const TICKER = /🟢|🟡|🔴/gu
 const PREFIX = /^(?:(?:⚙️|🔐|❓|⚪|⚠️|🟢|🟡|🔴)\s*)+/u
 const ASKS_PERSON = new Set(['AskUserQuestion', 'ExitPlanMode'])
-// Modes that settle the engine's own ask without a person: auto asks its classifier, dontAsk refuses.
-const NO_PERSON = new Set(['auto', 'dontAsk'])
+// The desktop app's own tools that hold a question for the person: a start_session offer waits for its answer,
+// and a wrap_up marked blocked ends the turn waiting on one.
+const OFFER = 'mcp__ccd_session__start_session'
+const WRAP_UP = 'mcp__ccd_turn__wrap_up'
+// Modes that settle the engine's own ask without a person: auto asks its classifier, dontAsk refuses,
+// bypassPermissions allows (a browser step's site check comes back as ask and runs at once).
+const NO_PERSON = new Set(['auto', 'dontAsk', 'bypassPermissions'])
+// A call that puts a question to the person, by its name and arguments.
+const asksQuestion = (tool: string, args: unknown) =>
+  ASKS_PERSON.has(tool) || (tool === OFFER && (args as { initiation?: unknown } | undefined)?.initiation === 'offer')
 
 let want: string | undefined
 let shown: string | undefined
 let busy = false
+// The main loop's wrap_up said the turn ends waiting on the person's answer.
+let blocked = false
 const waiting = new Set<string>()
 // The session's permission mode as the last classic event that carries one reported it.
 // classic.PreToolUse cannot say: its e is the tool call alone.
@@ -52,7 +62,10 @@ const flush = async ($: EngineInterface) => {
 
 export const register: Register = on => {
   on('turn.start', ($, e, next) => {
-    if (!e.agentId) show($, WORKING)
+    if (!e.agentId) {
+      blocked = false
+      show($, WORKING)
+    }
     return next(e)
   })
 
@@ -72,8 +85,9 @@ export const register: Register = on => {
     const verdict = await next(e)
     if (!ours && verdict.decision === 'ask' && e.tool_use_id) {
       waiting.add(e.tool_use_id)
-      const person = verdict.plugin !== undefined || personDecides(mode)
-      if (person && !ASKS_PERSON.has(e.tool)) show($, PERMISSION)
+      // A hook's ask, a plugin's or a settings hook's, goes to a person in every mode.
+      const person = verdict.plugin !== undefined || verdict.hook !== undefined || personDecides(mode)
+      if (person && !asksQuestion(e.tool, e.input)) show($, PERMISSION)
     }
     return verdict
   })
@@ -81,13 +95,15 @@ export const register: Register = on => {
   // Auto mode's classifier and dontAsk settle core asks without a person, so the mode decides the light here too.
   on('classic.PermissionRequest', ($, e, next) => {
     heard(e.permission_mode)
-    if (personDecides(e.permission_mode ?? mode) && !ASKS_PERSON.has(e.tool_name)) show($, PERMISSION)
+    if (personDecides(e.permission_mode ?? mode) && !asksQuestion(e.tool_name, e.tool_input)) show($, PERMISSION)
     return next(e)
   })
 
   on('tool.call', async ($, e, next) => {
     if (next.origin.plugin === $.plugin.name) return next(e)
-    if (ASKS_PERSON.has(e.tool)) {
+    const args = e as unknown as Record<string, unknown>
+    if (e.tool === WRAP_UP && !e.agentId) blocked = args.blocked === true
+    if (asksQuestion(e.tool, args)) {
       waiting.add(e.tool_use_id)
       show($, QUESTION)
     }
@@ -103,7 +119,7 @@ export const register: Register = on => {
     heard(e.permission_mode)
     if (!e.agent_id) {
       const running = (e.background_tasks?.length ?? 0) > 0
-      show($, running ? WORKING : e.last_assistant_message?.match(TICKER)?.at(-1) ?? NO_LIGHT)
+      show($, blocked ? QUESTION : running ? WORKING : e.last_assistant_message?.match(TICKER)?.at(-1) ?? NO_LIGHT)
     }
     return next(e)
   })
