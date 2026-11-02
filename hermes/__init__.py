@@ -23,9 +23,9 @@ QUESTION = "❓"
 NO_LIGHT = "⚪"
 FAILED = "⚠️"
 
-_TICKER = re.compile("[\U0001f7e2\U0001f7e1\U0001f534]")
+_TICKER = re.compile("[\U0001f7e2\U0001f7e1\U0001f534\u23f0]")
 _PREFIX = re.compile(
-    "^(?:(?:⚙️?|\U0001f510|❓|⚪|⚠️?|\U0001f7e2|\U0001f7e1|\U0001f534)\\s*)+"
+    "^(?:(?:⚙️?|\U0001f510|❓|⚪|⚠️?|\U0001f7e2|\U0001f7e1|\U0001f534|\u23f0)\\s*)+"
 )
 
 _lock = threading.Lock()
