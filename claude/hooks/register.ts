@@ -93,19 +93,13 @@ export const register: Register = on => {
     }
   })
 
-  on('classic.Stop', ($, e, next) => {
-    if (!e.agent_id) {
-      const running = (e.background_tasks?.length ?? 0) > 0
-      show($, blocked ? QUESTION : running ? WORKING : e.last_assistant_message?.match(TICKER)?.at(-1) ?? NO_LIGHT)
-    }
-    return next(e)
-  })
-
+  // The turn's end. classic.Stop never reaches a module in Claude Code 2.1.317, so the light is read here.
   on('turn.complete', ($, e, next) => {
     if (!e.agentId) {
       waiting.clear()
+      const light = e.answer.match(TICKER)?.at(-1) ?? NO_LIGHT
       if (e.reason === 'error' || e.reason === 'refusal') show($, FAILED)
-      if (e.reason === 'aborted') show($, e.answer.match(TICKER)?.at(-1) ?? NO_LIGHT)
+      else show($, blocked && e.reason === 'answer' ? QUESTION : light)
     }
     return next(e)
   })

@@ -4,7 +4,7 @@ With a few Claude sessions going at once, you can't tell from the sidebar which 
 
 | Emoji | Means |
 |---|---|
-| ⚙️ | Working, including background work still running after a reply |
+| ⚙️ | Working. Background work still running after a reply is not shown, since Claude Code 2.1.317 no longer tells plugins about it |
 | 🔐 | Waiting for you to allow a tool, including one a background helper wants |
 | ❓ | Waiting for you to answer a question or approve a plan, including a turn that ended on a question for you |
 | 🟢 🟡 🔴 ⏰ | Done. The light is the last 🟢, 🟡, 🔴 or ⏰ in Claude's reply; ⏰ means it is only waiting on a timed check |
