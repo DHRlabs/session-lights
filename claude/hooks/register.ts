@@ -27,6 +27,19 @@ let blocked = false
 // Calls held at a permission check, so 🔐 clears only once every one of them has run.
 const waiting = new Set<string>()
 
+// A short local record of the permission signals that reach this plugin, one file per session, so a missed 🔐 can be
+// traced: a plugin in a higher tier can handle PermissionRequest itself and never pass it on. Names and verdicts only.
+const LOG_LINES = 200
+const logged: string[] = []
+const note = ($: EngineInterface, what: string, fields: Record<string, unknown>) => {
+  logged.push(`${new Date().toISOString()} ${what} ${JSON.stringify(fields)}`)
+  if (logged.length > LOG_LINES) logged.splice(0, logged.length - LOG_LINES)
+  void (async () => {
+    const home = await $.env.get('HOME')
+    if (home) await $.fs.write(`${home}/.claude/session-lights/${$.session.id()}.log`, logged.join('\n') + '\n')
+  })().catch(() => undefined)
+}
+
 const show = ($: EngineInterface, light: string) => {
   want = light
   $.clock.after(0, () => void flush($).catch(() => undefined))
@@ -66,14 +79,26 @@ export const register: Register = on => {
     if (ours && (e.tool === GET || e.tool === RENAME)) return { decision: 'allow' }
     const verdict = await next(e)
     // An ask is not yet a person's: a mode or a classifier (auto mode's, the browser's site check) may settle it.
-    if (!ours && verdict.decision === 'ask' && e.tool_use_id) waiting.add(e.tool_use_id)
+    if (!ours && verdict.decision === 'ask' && e.tool_use_id) {
+      waiting.add(e.tool_use_id)
+      const { decision, plugin, hook, rule, setting } = verdict as Record<string, unknown>
+      note($, 'ask', { tool: e.tool, id: e.tool_use_id, agentId: e.agentId, approver: e.approver, decision, plugin, hook, rule, setting })
+    }
     return verdict
   })
 
   // Raised only once an ask goes to a person, from the main loop or a helper, in every mode. tool.check runs inside
   // tool.call's next() before any classifier or person is asked, so every id it raises for is already in waiting.
   on('classic.PermissionRequest', ($, e, next) => {
+    note($, 'PermissionRequest', { tool: e.tool_name, mode: e.permission_mode })
     if (!asksQuestion(e.tool_name, e.tool_input)) show($, PERMISSION)
+    return next(e)
+  })
+
+  // The dialog's own notice. It still arrives when a higher-tier plugin handles PermissionRequest and stops it there.
+  on('classic.Notification', ($, e, next) => {
+    note($, 'Notification', { type: e.notification_type })
+    if (e.notification_type === 'permission_prompt') show($, PERMISSION)
     return next(e)
   })
 
