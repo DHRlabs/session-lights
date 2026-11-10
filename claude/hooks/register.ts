@@ -26,6 +26,8 @@ let busy = false
 let blocked = false
 // Calls held at a permission check, so 🔐 clears only once every one of them has run.
 const waiting = new Set<string>()
+// Calls that put a question to the person. The dialog for one also raises a permission_prompt notice, which must not show 🔐.
+const asking = new Set<string>()
 
 // A short local record of the permission signals that reach this plugin, one file per session, so a missed 🔐 can be
 // traced: a plugin in a higher tier can handle PermissionRequest itself and never pass it on. Names and verdicts only.
@@ -36,7 +38,7 @@ const note = ($: EngineInterface, what: string, fields: Record<string, unknown>)
   if (logged.length > LOG_LINES) logged.splice(0, logged.length - LOG_LINES)
   void (async () => {
     const home = await $.env.get('HOME')
-    if (home) await $.fs.write(`${home}/.claude/session-lights/${$.session.id()}.log`, logged.join('\n') + '\n')
+    if (home) await $.fs.write(`${home}/.claude/session-lights/${await $.session.id()}.log`, logged.join('\n') + '\n')
   })().catch(() => undefined)
 }
 
@@ -98,7 +100,7 @@ export const register: Register = on => {
   // The dialog's own notice. It still arrives when a higher-tier plugin handles PermissionRequest and stops it there.
   on('classic.Notification', ($, e, next) => {
     note($, 'Notification', { type: e.notification_type })
-    if (e.notification_type === 'permission_prompt') show($, PERMISSION)
+    if (e.notification_type === 'permission_prompt' && asking.size === 0) show($, PERMISSION)
     return next(e)
   })
 
@@ -108,12 +110,14 @@ export const register: Register = on => {
     if (e.tool === WRAP_UP && !e.agentId) blocked = args.blocked === true
     if (asksQuestion(e.tool, args)) {
       waiting.add(e.tool_use_id)
+      asking.add(e.tool_use_id)
       show($, QUESTION)
     }
     try {
       return await next(e)
     } finally {
       waiting.delete(e.tool_use_id)
+      asking.delete(e.tool_use_id)
       if (waiting.size === 0 && (want === PERMISSION || want === QUESTION)) show($, WORKING)
     }
   })
@@ -122,6 +126,7 @@ export const register: Register = on => {
   on('turn.complete', ($, e, next) => {
     if (!e.agentId) {
       waiting.clear()
+      asking.clear()
       const light = e.answer.match(TICKER)?.at(-1) ?? NO_LIGHT
       if (e.reason === 'error' || e.reason === 'refusal') show($, FAILED)
       else show($, blocked && e.reason === 'answer' ? QUESTION : light)
