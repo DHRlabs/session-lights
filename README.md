@@ -7,7 +7,7 @@ With a few Claude sessions going at once, you can't tell from the sidebar which 
 | ⚙️ | Working. Background work still running after a reply is not shown, since Claude Code 2.1.317 no longer tells plugins about it |
 | 🔐 | Waiting for you to allow a tool, including one a background helper wants |
 | ❓ | Waiting for you to answer a question or approve a plan, including a turn that ended on a question for you |
-| 🟢 🟡 🔴 ⏰ | Done. The light is the last 🟢, 🟡, 🔴 or ⏰ in Claude's reply; ⏰ means it is only waiting on a timed check |
+| 🟢 🟡 🔴 ⏰ | Done. The light is the last 🟢, 🟡, 🔴 or ⏰ in Claude's reply; ⏰ means it is only waiting on someone or something else |
 | ⚪ | Done, and the reply had no light in it |
 | ⚠️ | The turn ended on an error |
 
@@ -15,10 +15,10 @@ The title itself never changes, only the emoji in front of it. Rename a session 
 
 ## The traffic light
 
-The green, yellow and red come from Claude's own reply. If you ask Claude to end every reply with one of them (green when it's done, yellow when it's done with optional next steps, red when something's still running or it needs you), the sidebar shows that too. A line like this in your CLAUDE.md or AGENTS.md is enough:
+The green, yellow and red come from Claude's own reply. If you ask Claude to end every reply with one of them (green when it's done, yellow when it's done with optional add-ons, red when something's still running or it needs you, the alarm clock when it's waiting on someone else), the sidebar shows that too. A line like this in your CLAUDE.md or AGENTS.md is enough:
 
 ```
-End every reply with 🟢 if the task is done, 🟡 if done with optional follow-ups, 🔴 if something is still running or you need me, or ⏰ if the only thing left is a timed check.
+End every reply with 🟢 if the task is done, 🟡 if done with optional follow-ups, 🔴 if something is still running or you need me, or ⏰ if the only thing left waits on someone else (a reply, a deploy, a timed check).
 ```
 
 Without it, finished sessions show ⚪.
