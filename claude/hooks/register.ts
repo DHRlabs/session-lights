@@ -24,6 +24,9 @@ let shown: string | undefined
 let busy = false
 // The main loop's wrap_up said the turn ends waiting on the person's answer.
 let blocked = false
+// The main loop is inside a turn, and the light its last reply ended on, shown again once the helpers it waited on finish.
+let inTurn = false
+let replyLight = NO_LIGHT
 // Calls held at a permission check, so 🔐 clears only once every one of them has run.
 const waiting = new Set<string>()
 // Calls that put a question to the person. The dialog for one also raises a permission_prompt notice, which must not show 🔐.
@@ -41,6 +44,12 @@ const note = ($: EngineInterface, what: string, fields: Record<string, unknown>)
     if (home) await $.fs.write(`${home}/.claude/session-lights/${await $.session.id()}.log`, logged.join('\n') + '\n')
   })().catch(() => undefined)
 }
+
+// Helper agents still at work. Claude Code 2.1.317 stopped telling plugins about background work after a reply, but
+// $.agent.list() still names the subagents; a helper in a pane of its own is left out, since its status can stand stale.
+const LIVE = new Set(['pending', 'running', 'waiting'])
+const helpersWorking = async ($: EngineInterface, except?: string) =>
+  (await $.agent.list()).some(a => a.id !== except && !a.teammateId && LIVE.has(a.status))
 
 const show = ($: EngineInterface, light: string) => {
   want = light
@@ -71,6 +80,7 @@ export const register: Register = on => {
   on('turn.start', ($, e, next) => {
     if (!e.agentId) {
       blocked = false
+      inTurn = true
       show($, WORKING)
     }
     return next(e)
@@ -123,13 +133,18 @@ export const register: Register = on => {
   })
 
   // The turn's end. classic.Stop never reaches a module in Claude Code 2.1.317, so the light is read here.
-  on('turn.complete', ($, e, next) => {
+  // A reply that lands while helper agents still run shows the gear, not its own light, until the last one ends.
+  on('turn.complete', async ($, e, next) => {
     if (!e.agentId) {
+      inTurn = false
       waiting.clear()
       asking.clear()
-      const light = e.answer.match(TICKER)?.at(-1) ?? NO_LIGHT
+      replyLight = e.answer.match(TICKER)?.at(-1) ?? NO_LIGHT
       if (e.reason === 'error' || e.reason === 'refusal') show($, FAILED)
-      else show($, blocked && e.reason === 'answer' ? QUESTION : light)
+      else if (blocked && e.reason === 'answer') show($, QUESTION)
+      else show($, (await helpersWorking($).catch(() => false)) ? WORKING : replyLight)
+    } else if (!inTurn && want === WORKING && !(await helpersWorking($, e.agentId).catch(() => true))) {
+      show($, replyLight)
     }
     return next(e)
   })
