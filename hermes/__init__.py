@@ -24,9 +24,9 @@ NO_LIGHT = "⚪"
 FAILED = "⚠️"
 
 # ⚙️ is a reply light too: a reply that ends on the gear says background work still runs.
-_TICKER = re.compile("\u2699\ufe0f|[\U0001f7e2\U0001f7e1\U0001f534\u23f0]")
+_TICKER = re.compile("\u2699\ufe0f|[\U0001f7e2\U0001f7e1\U0001f534\u23f0\u23f3]")
 _PREFIX = re.compile(
-    "^(?:(?:⚙️?|\U0001f510|❓|⚪|⚠️?|\U0001f7e2|\U0001f7e1|\U0001f534|\u23f0)\\s*)+"
+    "^(?:(?:⚙️?|\U0001f510|❓|⚪|⚠️?|\U0001f7e2|\U0001f7e1|\U0001f534|\u23f0|\u23f3)\\s*)+"
 )
 
 _lock = threading.Lock()
