@@ -49,9 +49,14 @@ const note = ($: EngineInterface, what: string, fields: Record<string, unknown>)
 
 // Helper agents still at work. Claude Code 2.1.317 stopped telling plugins about background work after a reply, but
 // $.agent.list() still names the subagents; a helper in a pane of its own is left out, since its status can stand stale.
-const LIVE = new Set(['pending', 'running', 'waiting'])
-const helpersWorking = async ($: EngineInterface, except?: string) =>
-  (await $.agent.list()).some(a => a.id !== except && !a.teammateId && LIVE.has(a.status))
+// 'waiting' is not work: Claude Code 2.1.321 reports a finished helper as idle, and as 'waiting' while it has unread
+// mail, so it stayed that way for good and every later reply showed the gear.
+const LIVE = new Set(['pending', 'running'])
+const helpersWorking = async ($: EngineInterface, except?: string) => {
+  const agents = await $.agent.list()
+  note($, 'helpers', { except, agents: agents.map(a => ({ id: a.id, status: a.status, pane: a.teammateId !== undefined })) })
+  return agents.some(a => a.id !== except && !a.teammateId && LIVE.has(a.status))
+}
 
 const show = ($: EngineInterface, light: string) => {
   want = light
