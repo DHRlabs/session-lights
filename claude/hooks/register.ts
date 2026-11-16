@@ -10,8 +10,8 @@ const NO_LIGHT = '⚪'
 const FAILED = '⚠️'
 // ⚙️ is a reply light too: a reply that ends on the gear says background work this session started still runs,
 // which the plugin cannot see for shells, monitors and workflows.
-const TICKER = /🟢|🟡|🔴|⏰|⚙️/gu
-const PREFIX = /^(?:(?:⚙️|🔐|❓|⚪|⚠️|🟢|🟡|🔴|⏰)\s*)+/u
+const TICKER = /🟢|🟡|🔴|⏰|⏳|⚙️/gu
+const PREFIX = /^(?:(?:⚙️|🔐|❓|⚪|⚠️|🟢|🟡|🔴|⏰|⏳)\s*)+/u
 const ASKS_PERSON = new Set(['AskUserQuestion', 'ExitPlanMode'])
 // The desktop app's own tools that hold a question for the person: a start_session offer waits for its answer,
 // and a wrap_up marked blocked ends the turn waiting on one.
